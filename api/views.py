@@ -1,6 +1,9 @@
+from django.views import View
 from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView
-from .models import Resume, ResumeSection, SectionFormat
-from .serializer import ResumeSerializer, ResumeSectionSerializer, SectionFormatSerializer
+from django.http import JsonResponse
+from .models import Resume
+from .forms import ResumeCreationForm
+from .serializer import ResumeSerializer
 
 
 class ResumeList(ListAPIView):
@@ -13,12 +16,22 @@ class ResumeDetail(RetrieveUpdateDestroyAPIView):
     serializer_class = ResumeSerializer
 
 
-class ResumeSectionDetail(RetrieveUpdateDestroyAPIView):
-    queryset = ResumeSection.objects.all()
-    serializer_class = ResumeSectionSerializer
+class ResumeCreate(View):
+    form_class = ResumeCreationForm
 
+    def post(self, request, *args, **kwargs):
+        print(request.body)
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            data = form.cleaned_data['data']
+            resume_format = form.cleaned_data['format']
 
-class SectionFormatDetail(RetrieveUpdateDestroyAPIView):
-    queryset = SectionFormat.objects.all()
-    serializer_class = SectionFormatSerializer
+            model = Resume(name=name, data=data, format=resume_format)
+            model.save()
+
+            return JsonResponse({'message': 'Form submitted successfully'})
+        else:
+            return JsonResponse({'error': 'Invalid form data'})
+
 
