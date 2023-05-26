@@ -33,5 +33,3 @@ class ResumeCreate(View):
             return JsonResponse({'message': 'Form submitted successfully'})
         else:
             return JsonResponse({'error': 'Invalid form data'})
-
-

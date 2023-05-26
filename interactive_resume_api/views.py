@@ -1,62 +1,17 @@
-import json
-import environ
-from authlib.integrations.django_client import OAuth
-from django.shortcuts import redirect, render
-from django.urls import reverse
-from urllib.parse import quote_plus, urlencode
-
-env = environ.Env(
-    AUTH0_CLIENT_ID=(str, ''),
-    AUTH0_CLIENT_SECRET=(str, ''),
-    AUTH0_DOMAIN=(str, '')
-)
-
-oauth = OAuth()
-
-oauth.register(
-    "auth0",
-    client_id=env.str('AUTH0_CLIENT_ID'),
-    client_secret=env.str('AUTH0_CLIENT_SECRET'),
-    client_kwargs={
-        "scope": "openid profile email",
-    },
-    server_metadata_url=f"https://{env.str('AUTH0_DOMAIN')}/.well-known/openid-configuration",
-)
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
-def login(request):
-    return oauth.auth0.authorize_redirect(
-        request, request.build_absolute_uri(reverse("callback"))
-    )
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        token["email"] = user.email
+        token["username"] = user.username
+
+        return token
 
 
-def callback(request):
-    token = oauth.auth0.authorize_access_token(request)
-    request.session["user"] = token
-    return redirect(request.build_absolute_uri(reverse("index")))
-
-
-def logout(request):
-    request.session.clear()
-
-    return redirect(
-        f"https://{env.str('AUTH0_DOMAIN')}/v2/logout?"
-        + urlencode(
-            {
-                "returnTo": request.build_absolute_uri(reverse("index")),
-                "client_id": env.str('AUTH0_CLIENT_ID'),
-            },
-            quote_via=quote_plus,
-        ),
-    )
-
-
-def index(request):
-    return render(
-        request,
-        "index.html",
-        context={
-            "session": request.session.get("user"),
-            "pretty": json.dumps(request.session.get("user"), indent=4),
-        },
-    )
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
